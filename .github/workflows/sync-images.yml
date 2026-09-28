@@ -1,0 +1,42 @@
+name: Sync Docker Images to GHCR
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - source: langfuse/langfuse:4
+            target: langfuse:4
+          - source: langfuse/langfuse-worker:4
+            target: langfuse-worker:4
+          - source: redis:7
+            target: redis:7
+          - source: postgres:17
+            target: postgres:17
+          - source: clickhouse/clickhouse-server:25.12
+            target: clickhouse-server:25.12
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull source image
+        run: docker pull "${{ matrix.source }}"
+
+      - name: Tag image for GHCR
+        run: docker tag "${{ matrix.source }}" "ghcr.io/hevenchen/${{ matrix.target }}"
+
+      - name: Push image to GHCR
+        run: docker push "ghcr.io/hevenchen/${{ matrix.target }}"
